@@ -1,6 +1,7 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { Kit, Item } from "../types";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { Kit, Item } from '../types';
+import { logEvent } from '../lib/analyticsDB';
 
 interface ChecklistState {
   kits: Kit[];
@@ -20,7 +21,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 
 export const useChecklistStore = create<ChecklistState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       kits: [],
       activeKitId: null,
       createKit: (name) =>
@@ -45,7 +46,10 @@ export const useChecklistStore = create<ChecklistState>()(
             kit.id === kitId
               ? {
                   ...kit,
-                  items: [...kit.items, { id: generateId(), text, checked: false }],
+                  items: [
+                    ...kit.items,
+                    { id: generateId(), text, checked: false } as Item,
+                  ],
                 }
               : kit
           ),
@@ -54,10 +58,7 @@ export const useChecklistStore = create<ChecklistState>()(
         set((state) => ({
           kits: state.kits.map((kit) =>
             kit.id === kitId
-              ? {
-                  ...kit,
-                  items: kit.items.filter((item) => item.id !== itemId),
-                }
+              ? { ...kit, items: kit.items.filter((item) => item.id !== itemId) }
               : kit
           ),
         })),
@@ -74,7 +75,20 @@ export const useChecklistStore = create<ChecklistState>()(
               : kit
           ),
         })),
-      toggleItem: (kitId, itemId) =>
+      toggleItem: (kitId, itemId) => {
+        const { kits } = get();
+        const kit = kits.find((k) => k.id === kitId);
+        const item = kit?.items.find((i) => i.id === itemId);
+        if (kit && item && !item.checked) {
+          void logEvent({
+            type: 'check',
+            kitId,
+            kitName: kit.name,
+            itemId,
+            itemText: item.text,
+            timestamp: Date.now(),
+          });
+        }
         set((state) => ({
           kits: state.kits.map((kit) =>
             kit.id === kitId
@@ -86,8 +100,34 @@ export const useChecklistStore = create<ChecklistState>()(
                 }
               : kit
           ),
-        })),
-      resetKit: (kitId) =>
+        }));
+      },
+      resetKit: (kitId) => {
+        const { kits } = get();
+        const kit = kits.find((k) => k.id === kitId);
+        if (kit && kit.items.length > 0) {
+          const checkedCount = kit.items.filter((i) => i.checked).length;
+          const unchecked = kit.items.filter((i) => !i.checked);
+          const now = Date.now();
+          void logEvent({
+            type: 'reset_session',
+            kitId,
+            kitName: kit.name,
+            totalItems: kit.items.length,
+            checkedItems: checkedCount,
+            timestamp: now,
+          });
+          unchecked.forEach((item) => {
+            void logEvent({
+              type: 'miss',
+              kitId,
+              kitName: kit.name,
+              itemId: item.id,
+              itemText: item.text,
+              timestamp: now,
+            });
+          });
+        }
         set((state) => ({
           kits: state.kits.map((kit) =>
             kit.id === kitId
@@ -97,10 +137,9 @@ export const useChecklistStore = create<ChecklistState>()(
                 }
               : kit
           ),
-        })),
+        }));
+      },
     }),
-    {
-      name: "contextual-checklist-v1",
-    }
+    { name: 'contextual-checklist-v1' }
   )
 );
