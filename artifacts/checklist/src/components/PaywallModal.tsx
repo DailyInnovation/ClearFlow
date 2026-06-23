@@ -1,4 +1,5 @@
-import { X, Mic, BarChart2, TrendingUp, Target, Crown, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { X, Mic, BarChart2, TrendingUp, Target, Crown, ExternalLink, Key, CheckCircle, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePremiumStore } from '../store/usePremiumStore';
 
@@ -34,14 +35,38 @@ const FEATURES = [
 
 export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const { activatePremium } = usePremiumStore();
+  const [showKeyField, setShowKeyField] = useState(false);
+  const [licenseKey, setLicenseKey] = useState('');
+  const [keyError, setKeyError] = useState('');
+  const [activated, setActivated] = useState(false);
 
   const handleBuy = () => {
     window.open(GUMROAD_URL, '_blank', 'noopener,noreferrer');
   };
 
-  const handleAlreadyPurchased = () => {
-    activatePremium();
+  const handleActivateKey = () => {
+    const trimmed = licenseKey.trim();
+    if (trimmed.length < 8) {
+      setKeyError('Please enter a valid license key.');
+      return;
+    }
+    setKeyError('');
+    setActivated(true);
+    setTimeout(() => {
+      activatePremium();
+      onClose();
+      setActivated(false);
+      setLicenseKey('');
+      setShowKeyField(false);
+    }, 900);
+  };
+
+  const handleClose = () => {
     onClose();
+    setShowKeyField(false);
+    setLicenseKey('');
+    setKeyError('');
+    setActivated(false);
   };
 
   return (
@@ -52,7 +77,7 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             initial={{ y: 60, opacity: 0 }}
@@ -113,13 +138,72 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
                 <ExternalLink className="w-4 h-4" />
               </button>
 
-              <button
-                onClick={handleAlreadyPurchased}
-                className="w-full py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
-                data-testid="paywall-already-purchased"
-              >
-                I've already purchased — Activate
-              </button>
+              {/* License key section */}
+              <div className="border border-border rounded-xl overflow-hidden">
+                <button
+                  onClick={() => { setShowKeyField((v) => !v); setKeyError(''); }}
+                  className="w-full flex items-center justify-between px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                  data-testid="paywall-toggle-key"
+                >
+                  <span className="flex items-center gap-2 font-medium">
+                    <Key className="w-4 h-4" />
+                    I already have a license key
+                  </span>
+                  <motion.div animate={{ rotate: showKeyField ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                    <ChevronDown className="w-4 h-4" />
+                  </motion.div>
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {showKeyField && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      className="overflow-hidden border-t border-border"
+                    >
+                      <div className="px-4 py-3 flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={licenseKey}
+                            onChange={(e) => { setLicenseKey(e.target.value); setKeyError(''); }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleActivateKey()}
+                            placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+                            className="flex-1 bg-background border border-border text-foreground font-mono text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/40"
+                            data-testid="license-key-input"
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                          <button
+                            onClick={handleActivateKey}
+                            disabled={!licenseKey.trim() || activated}
+                            className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground font-bold px-4 py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            data-testid="activate-key-button"
+                          >
+                            {activated ? (
+                              <CheckCircle className="w-4 h-4" />
+                            ) : (
+                              'Activate'
+                            )}
+                          </button>
+                        </div>
+                        {keyError && (
+                          <p className="text-xs text-destructive font-medium px-1" data-testid="key-error">
+                            {keyError}
+                          </p>
+                        )}
+                        {activated && (
+                          <p className="text-xs text-primary font-bold px-1">
+                            Key accepted — activating Pro...
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
         </motion.div>
