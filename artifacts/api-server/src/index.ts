@@ -1,6 +1,16 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err }, "Uncaught exception — shutting down");
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.fatal({ reason }, "Unhandled promise rejection — shutting down");
+  process.exit(1);
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {

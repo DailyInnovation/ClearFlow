@@ -2,7 +2,8 @@ import { Router } from "express";
 
 const router = Router();
 
-const GUMROAD_PRODUCT_ID = "bjtysz";
+const GUMROAD_PRODUCT_ID = process.env["GUMROAD_PRODUCT_ID"] ?? "bjtysz";
+const GUMROAD_TIMEOUT_MS = 8_000;
 
 router.post("/verify-license", async (req, res) => {
   const { license_key } = req.body as { license_key?: string };
@@ -12,16 +13,17 @@ router.post("/verify-license", async (req, res) => {
     return;
   }
 
-  try {
-    const params = new URLSearchParams({
-      product_id: GUMROAD_PRODUCT_ID,
-      license_key: license_key.trim(),
-    });
+  const params = new URLSearchParams({
+    product_id: GUMROAD_PRODUCT_ID,
+    license_key: license_key.trim(),
+  });
 
+  try {
     const gumroadRes = await fetch("https://api.gumroad.com/v2/licenses/verify", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
+      signal: AbortSignal.timeout(GUMROAD_TIMEOUT_MS),
     });
 
     const data = (await gumroadRes.json()) as {
@@ -43,7 +45,8 @@ router.post("/verify-license", async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    req.log.error({ err }, "Gumroad license verify failed");
+    const isTimeout = err instanceof DOMException && err.name === "TimeoutError";
+    req.log.error({ err }, isTimeout ? "Gumroad license verify timed out" : "Gumroad license verify failed");
     res.status(502).json({ success: false, message: "Could not reach the license server. Please try again." });
   }
 });
