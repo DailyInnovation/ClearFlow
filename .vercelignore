@@ -13,7 +13,6 @@ artifacts/checklist
 artifacts/mockup-sandbox
 lib/api-spec
 lib/db/drizzle
-lib/api-client-react
 *.test.*
 *.spec.*
 .vscode
