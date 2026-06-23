@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Mic, BarChart2, TrendingUp, Target, Crown, ExternalLink, Key, CheckCircle, ChevronDown } from 'lucide-react';
+import { X, Mic, BarChart2, TrendingUp, Target, Crown, ExternalLink, Key, CheckCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePremiumStore } from '../store/usePremiumStore';
 
@@ -44,21 +44,40 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
     window.open(GUMROAD_URL, '_blank', 'noopener,noreferrer');
   };
 
-  const handleActivateKey = () => {
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleActivateKey = async () => {
     const trimmed = licenseKey.trim();
-    if (trimmed.length < 8) {
-      setKeyError('Please enter a valid license key.');
+    if (!trimmed) {
+      setKeyError('Please enter your license key.');
       return;
     }
     setKeyError('');
-    setActivated(true);
-    setTimeout(() => {
-      activatePremium();
-      onClose();
-      setActivated(false);
-      setLicenseKey('');
-      setShowKeyField(false);
-    }, 900);
+    setIsVerifying(true);
+    try {
+      const res = await fetch('/api/verify-license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_key: trimmed }),
+      });
+      const data = (await res.json()) as { success: boolean; message?: string };
+      if (!data.success) {
+        setKeyError(data.message ?? 'Invalid license key.');
+        return;
+      }
+      setActivated(true);
+      setTimeout(() => {
+        activatePremium();
+        onClose();
+        setActivated(false);
+        setLicenseKey('');
+        setShowKeyField(false);
+      }, 900);
+    } catch {
+      setKeyError('Could not reach the license server. Check your connection and try again.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleClose = () => {
@@ -178,12 +197,14 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
                           />
                           <button
                             onClick={handleActivateKey}
-                            disabled={!licenseKey.trim() || activated}
-                            className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground font-bold px-4 py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            disabled={!licenseKey.trim() || isVerifying || activated}
+                            className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground font-bold px-4 py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all min-w-[90px] justify-center"
                             data-testid="activate-key-button"
                           >
                             {activated ? (
                               <CheckCircle className="w-4 h-4" />
+                            ) : isVerifying ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               'Activate'
                             )}
