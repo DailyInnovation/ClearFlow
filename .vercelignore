@@ -1,0 +1,22 @@
+# Ignore unnecessary files during Vercel deployment
+.git
+.gitignore
+.replit
+.replitignore
+.env.local
+.env.*.local
+README.md
+replit.md
+attached_assets
+scripts
+artifacts/checklist
+artifacts/mockup-sandbox
+lib/api-spec
+lib/db/drizzle
+lib/api-client-react
+*.test.*
+*.spec.*
+.vscode
+.idea
+*.log
+.DS_Store

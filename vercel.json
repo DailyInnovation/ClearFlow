@@ -1,0 +1,8 @@
+{
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "ignoreCommand": "git check-ignore -q $VERCEL_FILE_PATH 2>/dev/null || git ls-files --others --exclude-standard | grep -q $VERCEL_FILE_PATH",
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
