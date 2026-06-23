@@ -9,8 +9,6 @@ README.md
 replit.md
 attached_assets
 scripts
-artifacts/checklist
-artifacts/mockup-sandbox
 lib/api-spec
 lib/db/drizzle
 *.test.*
