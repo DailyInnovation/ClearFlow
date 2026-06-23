@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Mic, BarChart2, TrendingUp, Target, Crown, ExternalLink, Key, CheckCircle, ChevronDown, Loader2 } from 'lucide-react';
+import { X, Mic, BarChart2, TrendingUp, Target, Crown, Key, CheckCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePremiumStore } from '../store/usePremiumStore';
 
@@ -39,10 +39,6 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const [licenseKey, setLicenseKey] = useState('');
   const [keyError, setKeyError] = useState('');
   const [activated, setActivated] = useState(false);
-
-  const handleBuy = () => {
-    window.open(GUMROAD_URL, '_blank', 'noopener,noreferrer');
-  };
 
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -148,14 +144,13 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
 
             {/* CTA */}
             <div className="px-6 pb-8 pt-2 flex flex-col gap-3">
-              <button
-                onClick={handleBuy}
-                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity text-base"
+              <a
+                className="gumroad-button w-full block"
+                href={GUMROAD_URL}
                 data-testid="paywall-buy-button"
               >
-                Get Pro — Buy on Gumroad
-                <ExternalLink className="w-4 h-4" />
-              </button>
+                Buy on
+              </a>
 
               {/* License key section */}
               <div className="border border-border rounded-xl overflow-hidden">
